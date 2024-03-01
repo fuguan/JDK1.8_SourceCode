@@ -232,6 +232,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The default initial capacity - MUST be a power of two.
+     * 默认初始值：2的4次方=16
      */
     static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
 
@@ -239,11 +240,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * The maximum capacity, used if a higher value is implicitly specified
      * by either of the constructors with arguments.
      * MUST be a power of two <= 1<<30.
+     * 最大容量：2的30次方=10亿左右
      */
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
     /**
      * The load factor used when none specified in constructor.
+     * 默认负载因子：0.75
      */
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
@@ -280,6 +283,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         final int hash;
         final K key;
         V value;
+
+        /**
+         * 下一节点
+         */
         Node<K,V> next;
 
         Node(int hash, K key, V value, Node<K,V> next) {
@@ -298,6 +305,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         }
 
         public final V setValue(V newValue) {
+            // 插入新值，返回旧值
             V oldValue = value;
             value = newValue;
             return oldValue;
@@ -333,9 +341,17 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * cheapest possible way to reduce systematic lossage, as well as
      * to incorporate impact of the highest bits that would otherwise
      * never be used in index calculations because of table bounds.
+     *
+     * hash计算方式
+     *
      */
     static final int hash(Object key) {
         int h;
+        // 1.key为null，hashcode=0
+        // 2.key不位null
+        // 2.1取key默认hashcode实现，并赋值h
+        // 2.2对h进行无符号右移16位，忽略符号位，空位都以0补齐，并临时赋值，假设为k
+        // 2.3对h与k进行异或计算
         return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
     }
 
@@ -428,6 +444,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * The load factor for the hash table.
+     * 负载因子
      *
      * @serial
      */
@@ -554,6 +571,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     public V get(Object key) {
         Node<K,V> e;
+        // 1.计算key的hash值
+        // 2.调用getNode方法获取Node节点
+        // 3.node为空返回null
+        // 4.node部位空返回node的value值
         return (e = getNode(hash(key), key)) == null ? null : e.value;
     }
 
@@ -565,22 +586,45 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @return the node, or null if none
      */
     final Node<K,V> getNode(int hash, Object key) {
+        // tab：临时Node数组
+        // first：第一个Node
         Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
+
+        // table：当前map的Node数组
+        // tab：临时Node数组，指向原有数组
+        // n：临时数组长度
+        // first：临时数组第一个节点
+        // 1.判断数组不为空，且数组长度不为空，且第一个节点不为空
+        // 第一个节点取值：(数组长度-1) & hash
         if ((tab = table) != null && (n = tab.length) > 0 &&
             (first = tab[(n - 1) & hash]) != null) {
+
+            // 2.判断第一个节点的hash值与传入hash值一致，且key值一致，则返回该节点
             if (first.hash == hash && // always check first node
-                ((k = first.key) == key || (key != null && key.equals(k))))
+                ((k = first.key) == key || (key != null && key.equals(k)))){
                 return first;
+            }
+
+            // 3.hash一致，但第一个节点key值比对不一致，则取下一个节点，赋值给临时变量e
             if ((e = first.next) != null) {
-                if (first instanceof TreeNode)
+
+                if (first instanceof TreeNode){
+                    // 4.链表已经树化，走红黑树逻辑
                     return ((TreeNode<K,V>)first).getTreeNode(hash, key);
+                }
+
+                // 5.未树化，走单向链表逻辑
                 do {
+                    // 6.判断节点hash值与key值与参数参数是否一致，一致则返回，否则循环取下一节点
                     if (e.hash == hash &&
-                        ((k = e.key) == key || (key != null && key.equals(k))))
+                        ((k = e.key) == key || (key != null && key.equals(k)))){
                         return e;
+                    }
                 } while ((e = e.next) != null);
             }
         }
+
+        //
         return null;
     }
 
